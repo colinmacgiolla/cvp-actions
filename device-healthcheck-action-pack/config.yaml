@@ -1,0 +1,4 @@
+type: PACKAGE
+version: 1.0.0
+name: Health Check Action package
+description: Action package containing a script that runs a switch healthcheck
