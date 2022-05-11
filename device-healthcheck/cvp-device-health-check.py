@@ -21,9 +21,12 @@ from cvplibrary import Device
 from cvplibrary.auditlogger import alog
 import json
 import ssl
+import ipaddress
 
 ssl._create_default_https_context = ssl._create_unverified_context
 SCRIPT_DEBUG = False
+SPINE_HINT = 'spine'
+UNDERLAY_VRF = 'default'
 
 
 def check_connection(serial, device):
@@ -525,9 +528,9 @@ def verify_routing_protocol_model(device):
 def verify_bfd(device):
     try:
         response = device.runCmds(['show bfd peers'])
-        for neighbor in response[0]['response']['vrfs']['default']['ipv4Neighbors']:
-            for interface in response[0]['response']['vrfs']['default']['ipv4Neighbors'][neighbor]['peerStats']:
-                if response[0]['response']['vrfs']['default']['ipv4Neighbors'][neighbor]['peerStats'][interface]['status'] != 'up':
+        for neighbor in response[0]['response']['vrfs'][UNDERLAY_VRF]['ipv4Neighbors']:
+            for interface in response[0]['response']['vrfs'][UNDERLAY_VRF]['ipv4Neighbors'][neighbor]['peerStats']:
+                if response[0]['response']['vrfs'][UNDERLAY_VRF]['ipv4Neighbors'][neighbor]['peerStats'][interface]['status'] != 'up':
                         return False
         return True
     except:
@@ -554,11 +557,11 @@ def verify_bgp_ipv4_unicast(device):
 def verify_bgp_evpn(device):
     try:
         response = device.runCmds(['show bgp evpn summary'])
-        if len(response[0]['response']['vrfs']['default']['peers']) == 0:
+        if len(response[0]['response']['vrfs'][UNDERLAY_VRF]['peers']) == 0:
             return None
         else:
-            for peer in response[0]['response']['vrfs']['default']['peers']:
-                if response[0]['response']['vrfs']['default']['peers'][peer]['peerState'] != 'Established':
+            for peer in response[0]['response']['vrfs'][UNDERLAY_VRF]['peers']:
+                if response[0]['response']['vrfs'][UNDERLAY_VRF]['peers'][peer]['peerState'] != 'Established':
                     return False
             return True
     except:
@@ -748,6 +751,94 @@ def verify_ptp_skew(device):
         return None
 
 
+def verify_bgp_spine_prefixes(device):
+    try:
+        neighbors = device.runCmds(['show lldp neighbors'])[0]['response']
+        routed_interfaces = device.runCmds(['show ip interface brief'])[0]['response']
+        peers = device.runCmds(['show ip bgp summary'])[0]['response']
+        
+        if SCRIPT_DEBUG:
+            alog("Successfully collected interface info for verifying spine prefixes")
+            
+        if len(neighbors['lldpNeighbors']) == 0:
+            if SCRIPT_DEBUG:
+                alog("No LLDP neighbors found: %s" % neighbors)
+            return None
+        if len(routed_interfaces['interfaces']) == 0:
+            if SCRIPT_DEBUG:
+                alog("No routed interfaces found: %s" % routed_interfaces)
+            return None
+        if len(peers['vrfs'][UNDERLAY_VRF]['peers']) == 0:
+            if SCRIPT_DEBUG:
+                alog("No BGP peers found in default VRF: %s" % peers)
+            return None
+        
+    except Exception as e:
+        alog("verify_bgp_spine_prefixes: Data collection failed - %s" % e)
+        return False
+    
+    # build a list of spine ports
+    spine_ports = []
+    for entry in neighbors['lldpNeighbors']:
+        if SPINE_HINT in entry['neighborDevice'].lower():
+            spine_ports.append(entry['port'])
+    if SCRIPT_DEBUG:
+        alog("Spine ports collected:\n%s" % spine_ports)
+
+    if len(spine_ports) == 0:
+        alog("No spine facing ports identified - skipping test")
+        return None
+                
+    # Get the IP addresses of the spine links
+    local_ip = []
+    for entry in spine_ports:
+        if entry in routed_interfaces['interfaces']:
+            ip = routed_interfaces['interfaces'][entry]['interfaceAddress']['ipAddr']
+            local_ip.append( ip['address'] + '/' + str(ip['maskLen']) )
+            
+    if SCRIPT_DEBUG:
+        alog("Local port IP collected:\n%s" % local_ip)
+        
+    if len(local_ip) == 0:
+        alog("Unable to identify local IP addresses for spine facing ports - skipping test")
+        return None
+            
+    # Calculate the peer IPs
+    peer_ip = []
+    for address in local_ip:
+        interface = ipaddress.IPv4Interface(address)
+        hosts = list(interface.network.hosts())
+        
+        for entry in hosts:
+            if entry != interface.ip:
+                peer_ip.append( str(entry) )
+            else:
+                pass
+    if SCRIPT_DEBUG:
+        alog('Collected the following peer IPs:\n%s' % peer_ip)
+    
+    if len(peer_ip) == 0:
+        alog("Unable to identify BGP peer IP addresses - skipping test")
+        return None    
+    
+    # Check that we are receiving the same number of routes from all spines
+    remote_prefixes = []
+    for peer in peer_ip:
+        remote_prefixes.append( peers['vrfs'][UNDERLAY_VRF]['peers'][peer]['prefixAccepted'] )
+    if SCRIPT_DEBUG:
+        alog('Spine prefixes accepted:\n%s' % remote_prefixes)
+        
+    if len(set(remote_prefixes)) == 1:
+        return True
+    else:
+        alog('Not receiving or accepting the same number of prefixes from all spines.')
+        return False
+
+    # This code should be unreachable    
+    return False
+
+
+
 test_catalog = {
 #    '01.01': verify_eos_version,
 #    '01.02': verify_terminattr_version,
@@ -791,6 +882,7 @@ test_catalog = {
 #    '03.12': verify_ptp_offset_from_master,
 #    '03.13': verify_ptp_mean_path_delay,
 #    '03.14': verify_ptp_skew,
+    '03.15': verify_bgp_spine_prefixes,
 }
 
 
