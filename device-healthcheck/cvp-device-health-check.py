@@ -257,7 +257,12 @@ def verify_uptime(device):
         if response[0]['response']['upTime'] > 86400:
             return True
         else:
-            return False
+            # If we reloaded in the last 24 hours, at a user request
+            # Then this test case should pass (cover reload due to upgrade)
+            if verify_reload_cause(device) is not True:
+                return False
+            else:
+                return True
     except:
         return None
 
