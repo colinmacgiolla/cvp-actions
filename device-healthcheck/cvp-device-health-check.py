@@ -752,6 +752,26 @@ def verify_ptp_skew(device):
 
 
 def verify_bgp_spine_prefixes(device):
+    '''Spine prefix verification
+    
+       Details: This test case tries to ensure that we are getting consistent numbers
+          of prefixes from all the spines. We attempt to do the following;
+          1. Based on the SPINE_HINT global, we identify the spines from the LLDP neighbor name
+            Specifically we identify the spine ports
+          2. We take the routed interfaces, and get the IP addresses assigned to the spine ports
+          3. Calculate the peer IP address (assumes there is only one)
+          4. Retrieve the # of prefixes accepted for each of the spine peers
+          5. Compare the # of prefixes over all the spines
+          
+       Args: device (obj)
+             SPINE_HINT(str) (global) - string to search for in the hostname of the spines
+             UNDERLAY_VRF(str) (global) - underlay VRF, default is "default"
+       Returns:
+          True (bool) - Test case has passed
+          False (bool) - Test case failed
+          None - Test was skipped
+    '''
+
     try:
         neighbors = device.runCmds(['show lldp neighbors'])[0]['response']
         routed_interfaces = device.runCmds(['show ip interface brief'])[0]['response']
