@@ -763,7 +763,7 @@ def verify_bgp_spine_prefixes(device):
           4. Retrieve the # of prefixes accepted for each of the spine peers
           5. Compare the # of prefixes over all the spines
           
-       Args: device (obj)
+       Args: device(obj)
              SPINE_HINT(str) (global) - string to search for in the hostname of the spines
              UNDERLAY_VRF(str) (global) - underlay VRF, default is "default"
        Returns:
