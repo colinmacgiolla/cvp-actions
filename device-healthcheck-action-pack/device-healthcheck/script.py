@@ -236,11 +236,16 @@ def verify_syslog(device):
 # Report uptime below 24 hours.
 def verify_uptime(device):
     try:
-        response = device.runDeviceCmds(['show uptime'])
+        response = device.runCmds(['show uptime'])
         if response[0]['response']['upTime'] > 86400:
             return True
         else:
-            return False
+            # If we reloaded in the last 24 hours, at a user request
+            # Then this test case should pass (cover reload due to upgrade)
+            if verify_reload_cause(device) is not True:
+                return False
+            else:
+                return True
     except:
         return None
 
