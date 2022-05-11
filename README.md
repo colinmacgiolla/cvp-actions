@@ -37,6 +37,7 @@ Can be applied to one or more devices. Will fail / trigger an assert if any of t
 
 # References
 [UI For Custom Action Scripts](https://www.arista.com/en/support/toi/cvp-2021-3-0/14901-ui-for-custom-action-scripts)
+
 [Change Control Scripted Actions](https://www.arista.com/en/support/toi/cvp-2019-1-0/14330-change-control-script-actions)
 
 # Other Action Packs
