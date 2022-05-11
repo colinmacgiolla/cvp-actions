@@ -25,6 +25,8 @@ import ipaddress
 
 ssl._create_default_https_context = ssl._create_unverified_context
 SCRIPT_DEBUG = False
+SPINE_HINT = 'spine'
+UNDERLAY_VRF = 'default'
 
 
 def check_connection(serial, device):
@@ -526,9 +528,9 @@ def verify_routing_protocol_model(device):
 def verify_bfd(device):
     try:
         response = device.runCmds(['show bfd peers'])
-        for neighbor in response[0]['response']['vrfs']['default']['ipv4Neighbors']:
-            for interface in response[0]['response']['vrfs']['default']['ipv4Neighbors'][neighbor]['peerStats']:
-                if response[0]['response']['vrfs']['default']['ipv4Neighbors'][neighbor]['peerStats'][interface]['status'] != 'up':
+        for neighbor in response[0]['response']['vrfs'][UNDERLAY_VRF]['ipv4Neighbors']:
+            for interface in response[0]['response']['vrfs'][UNDERLAY_VRF]['ipv4Neighbors'][neighbor]['peerStats']:
+                if response[0]['response']['vrfs'][UNDERLAY_VRF]['ipv4Neighbors'][neighbor]['peerStats'][interface]['status'] != 'up':
                         return False
         return True
     except:
@@ -555,11 +557,11 @@ def verify_bgp_ipv4_unicast(device):
 def verify_bgp_evpn(device):
     try:
         response = device.runCmds(['show bgp evpn summary'])
-        if len(response[0]['response']['vrfs']['default']['peers']) == 0:
+        if len(response[0]['response']['vrfs'][UNDERLAY_VRF]['peers']) == 0:
             return None
         else:
-            for peer in response[0]['response']['vrfs']['default']['peers']:
-                if response[0]['response']['vrfs']['default']['peers'][peer]['peerState'] != 'Established':
+            for peer in response[0]['response']['vrfs'][UNDERLAY_VRF]['peers']:
+                if response[0]['response']['vrfs'][UNDERLAY_VRF]['peers'][peer]['peerState'] != 'Established':
                     return False
             return True
     except:
@@ -757,9 +759,6 @@ def verify_bgp_spine_prefixes(device):
         
         if SCRIPT_DEBUG:
             alog("Successfully collected interface info for verifying spine prefixes")
-            alog(neighbors)
-            alog(routed_interfaces)
-            alog(peers)
             
         if len(neighbors['lldpNeighbors']) == 0:
             if SCRIPT_DEBUG:
@@ -769,7 +768,7 @@ def verify_bgp_spine_prefixes(device):
             if SCRIPT_DEBUG:
                 alog("No routed interfaces found: %s" % routed_interfaces)
             return None
-        if len(peers['vrfs']['default']['peers']) == 0:
+        if len(peers['vrfs'][UNDERLAY_VRF]['peers']) == 0:
             if SCRIPT_DEBUG:
                 alog("No BGP peers found in default VRF: %s" % peers)
             return None
@@ -781,7 +780,7 @@ def verify_bgp_spine_prefixes(device):
     # build a list of spine ports
     spine_ports = []
     for entry in neighbors['lldpNeighbors']:
-        if 'spine' in entry['neighborDevice'].lower():
+        if SPINE_HINT in entry['neighborDevice'].lower():
             spine_ports.append(entry['port'])
     if SCRIPT_DEBUG:
         alog("Spine ports collected:\n%s" % spine_ports)
@@ -825,14 +824,14 @@ def verify_bgp_spine_prefixes(device):
     # Check that we are receiving the same number of routes from all spines
     remote_prefixes = []
     for peer in peer_ip:
-        remote_prefixes.append( peers[peer]['prefixAccepted'] )
+        remote_prefixes.append( peers['vrfs'][UNDERLAY_VRF]['peers'][peer]['prefixAccepted'] )
     if SCRIPT_DEBUG:
         alog('Spine prefixes accepted:\n%s' % remote_prefixes)
         
     if len(set(remote_prefixes)) == 1:
         return True
     else:
-        alog('Not all spines are accepting the same number of prefixes')
+        alog('Not receiving or accepting the same number of prefixes from all spines.')
         return False
 
     # This code should be unreachable    
