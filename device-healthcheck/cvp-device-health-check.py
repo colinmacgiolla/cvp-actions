@@ -751,29 +751,32 @@ def verify_ptp_skew(device):
 
 def verify_bgp_spine_prefixes(device):
     try:
-        neighbors = device.runCmds(['show lldp neighbor'])[0]['response']
+        neighbors = device.runCmds(['show lldp neighbors'])[0]['response']
         routed_interfaces = device.runCmds(['show ip interface brief'])[0]['response']
         peers = device.runCmds(['show ip bgp summary'])[0]['response']
         
         if SCRIPT_DEBUG:
-            ctx.alog("Successfully collected interface info for verifying spine prefixes")
+            alog("Successfully collected interface info for verifying spine prefixes")
+            alog(neighbors)
+            alog(routed_interfaces)
+            alog(peers)
             
         if len(neighbors['lldpNeighbors']) == 0:
             if SCRIPT_DEBUG:
-                ctx.alog("No LLDP neighbors found: %s" % neighbors)
+                alog("No LLDP neighbors found: %s" % neighbors)
             return None
         if len(routed_interfaces['interfaces']) == 0:
             if SCRIPT_DEBUG:
-                ctx.alog("No routed interfaces found: %s" % routed_interfaces)
+                alog("No routed interfaces found: %s" % routed_interfaces)
             return None
         if len(peers['vrfs']['default']['peers']) == 0:
             if SCRIPT_DEBUG:
-                ctx.alog("No BGP peers found in default VRF: %s" % peers)
+                alog("No BGP peers found in default VRF: %s" % peers)
             return None
         
-    except:
-        ctx.alog("verify_bgp_spine_prefixes: Data collection failed")
-        return None
+    except Exception as e:
+        alog("verify_bgp_spine_prefixes: Data collection failed - %s" % e)
+        return False
     
     # build a list of spine ports
     spine_ports = []
@@ -781,45 +784,55 @@ def verify_bgp_spine_prefixes(device):
         if 'spine' in entry['neighborDevice'].lower():
             spine_ports.append(entry['port'])
     if SCRIPT_DEBUG:
-        ctx.alog("Spine ports collected:\n%s" % spine_ports)
+        alog("Spine ports collected:\n%s" % spine_ports)
 
+    if len(spine_ports) == 0:
+        alog("No spine facing ports identified - skipping test")
+        return None
                 
     # Get the IP addresses of the spine links
     local_ip = []
     for entry in spine_ports:
         if entry in routed_interfaces['interfaces']:
             ip = routed_interfaces['interfaces'][entry]['interfaceAddress']['ipAddr']
-            local_ip.append( ip['address'] + '/' + ip['maskLen'] )
+            local_ip.append( ip['address'] + '/' + str(ip['maskLen']) )
             
     if SCRIPT_DEBUG:
-        ctx.alog("Local port IP collected:\n%s" % local_ip)
+        alog("Local port IP collected:\n%s" % local_ip)
+        
+    if len(local_ip) == 0:
+        alog("Unable to identify local IP addresses for spine facing ports - skipping test")
+        return None
             
     # Calculate the peer IPs
     peer_ip = []
     for address in local_ip:
-        interface = ipaddress.IPv4Address(address)
+        interface = ipaddress.IPv4Interface(address)
         hosts = list(interface.network.hosts())
         
         for entry in hosts:
             if entry != interface.ip:
-                peer_ip.append( str(entry) + "/" + interface.network.prefixlen )
+                peer_ip.append( str(entry) )
             else:
                 pass
     if SCRIPT_DEBUG:
-        ctx.alog('Collected the following peer IPs:\n%s' % peer_ip)
-        
+        alog('Collected the following peer IPs:\n%s' % peer_ip)
+    
+    if len(peer_ip) == 0:
+        alog("Unable to identify BGP peer IP addresses - skipping test")
+        return None    
     
     # Check that we are receiving the same number of routes from all spines
     remote_prefixes = []
     for peer in peer_ip:
         remote_prefixes.append( peers[peer]['prefixAccepted'] )
     if SCRIPT_DEBUG:
-        ctx.alog('Spine prefixes accepted:\n%s' % remote_prefixes)
+        alog('Spine prefixes accepted:\n%s' % remote_prefixes)
         
     if len(set(remote_prefixes)) == 1:
         return True
     else:
-        ctx.alog('Not all spines are accepting the same number of prefixes')
+        alog('Not all spines are accepting the same number of prefixes')
         return False
 
     # This code should be unreachable    
