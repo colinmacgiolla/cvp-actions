@@ -15,7 +15,6 @@ CVP_SESSION_ID - Session id of current cvp user, this can be passed around to cv
 SCRIPT_ARGS - A dictionary of arguments passed to the Script Action
 """
 
-from zmq import PROTOCOL_ERROR_ZMTP_MALFORMED_COMMAND_MESSAGE
 from cvplibrary import CVPGlobalVariables, GlobalVariableNames
 from cvplibrary import RestClient
 from cvplibrary import Device
