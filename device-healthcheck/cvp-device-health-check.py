@@ -790,6 +790,9 @@ def verify_bgp_spine_prefixes(device):
             if SCRIPT_DEBUG:
                 alog("No routed interfaces found: %s" % routed_interfaces)
             return None
+        if len(peers['vrfs']) == 0:
+            alog("BGP not running - skipping check")
+            return None
         if len(peers['vrfs'][UNDERLAY_VRF]['peers']) == 0:
             if SCRIPT_DEBUG:
                 alog("No BGP peers found in default VRF: %s" % peers)
