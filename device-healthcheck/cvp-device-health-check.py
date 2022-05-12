@@ -275,7 +275,7 @@ def verify_reload_cause(device):
     try:
         response = device.runCmds(['show reload cause'])
         if response[0]['response']['resetCauses'][0]['description'] == 'Reload requested by the user.' or \
-           response[0]['response']['resetCauses'][0]['description'] == 'Reload requested after FPGA upgrade.':
+           response[0]['response']['resetCauses'][0]['description'] == 'Reload requested after FPGA upgrade':
             return True
         else:
             return False
