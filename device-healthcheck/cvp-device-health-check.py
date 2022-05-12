@@ -274,7 +274,8 @@ def verify_uptime(device):
 def verify_reload_cause(device):
     try:
         response = device.runCmds(['show reload cause'])
-        if response[0]['response']['resetCauses'][0]['description'] == 'Reload requested by the user.':
+        if response[0]['response']['resetCauses'][0]['description'] == 'Reload requested by the user.' or \
+           response[0]['response']['resetCauses'][0]['description'] == 'Reload requested after FPGA upgrade':
             return True
         else:
             return False
@@ -477,7 +478,8 @@ def verify_portchannels(device):
             return None
         else:
             for portchannel in response[0]['response']['portChannels']:
-                if len(response[0]['response']['portChannels'][portchannel]['inactivePorts']) != 0:
+                if len(response[0]['response']['portChannels'][portchannel]['inactivePorts']) != 0 and \
+                    len(response[0]['response']['portChannels'][portchannel]['activePorts']) > 0:
                     return False
             return True
     except:
@@ -594,8 +596,8 @@ def verify_mlag_interfaces(device):
         response = device.runCmds(['show mlag'])
         if response[0]['response']['state'] == 'disabled':
             return None
-        elif response[0]['response']['mlagPorts']['Inactive'] != 0:
-            return False
+#        elif response[0]['response']['mlagPorts']['Inactive'] != 0:
+#            return False
         elif response[0]['response']['mlagPorts']['Active-partial'] != 0:
             return False
         else:
@@ -787,6 +789,9 @@ def verify_bgp_spine_prefixes(device):
         if len(routed_interfaces['interfaces']) == 0:
             if SCRIPT_DEBUG:
                 alog("No routed interfaces found: %s" % routed_interfaces)
+            return None
+        if len(peers['vrfs']) == 0:
+            alog("BGP not running - skipping check")
             return None
         if len(peers['vrfs'][UNDERLAY_VRF]['peers']) == 0:
             if SCRIPT_DEBUG:
