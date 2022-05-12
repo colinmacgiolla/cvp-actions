@@ -478,7 +478,8 @@ def verify_portchannels(device):
             return None
         else:
             for portchannel in response[0]['response']['portChannels']:
-                if len(response[0]['response']['portChannels'][portchannel]['inactivePorts']) != 0:
+                if len(response[0]['response']['portChannels'][portchannel]['inactivePorts']) != 0 and \
+                    len(response[0]['response']['portChannels'][portchannel]['activePorts']) > 0:
                     return False
             return True
     except:
