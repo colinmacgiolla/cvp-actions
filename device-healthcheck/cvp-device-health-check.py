@@ -595,8 +595,8 @@ def verify_mlag_interfaces(device):
         response = device.runCmds(['show mlag'])
         if response[0]['response']['state'] == 'disabled':
             return None
-        elif response[0]['response']['mlagPorts']['Inactive'] != 0:
-            return False
+#        elif response[0]['response']['mlagPorts']['Inactive'] != 0:
+#            return False
         elif response[0]['response']['mlagPorts']['Active-partial'] != 0:
             return False
         else:
