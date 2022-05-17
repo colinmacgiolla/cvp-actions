@@ -15,7 +15,6 @@ CVP_SESSION_ID - Session id of current cvp user, this can be passed around to cv
 SCRIPT_ARGS - A dictionary of arguments passed to the Script Action
 """
 
-from turtle import clear
 from cvplibrary import CVPGlobalVariables, GlobalVariableNames
 from cvplibrary import RestClient
 from cvplibrary import Device
