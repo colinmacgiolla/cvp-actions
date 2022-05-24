@@ -34,6 +34,8 @@ and then the new version can be installed
 # CVP Actions
 ## Device Healthcheck
 Can be applied to one or more devices. Will fail / trigger an assert if any of the test cases fail.
+## Cleanup Flash
+Backport of [Delete SWIs](https://github.com/aristanetworks/cloudvision-python-actions/tree/trunk/delete-swis-action-pack/delete-swis). Deletes all unused swi files.
 
 # References
 [UI For Custom Action Scripts](https://www.arista.com/en/support/toi/cvp-2021-3-0/14901-ui-for-custom-action-scripts)

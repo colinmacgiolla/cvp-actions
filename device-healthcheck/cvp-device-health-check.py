@@ -2,7 +2,7 @@
 # Use of this source code is governed by the Apache License 2.0
 # that can be found in the COPYING file.
 #
-# Version 1.0: 17-01-2022
+# Version 1.2: 13/05/2022
 # EOS Device Healthchecks as Custom CVP Task
 
 """
@@ -19,7 +19,7 @@ from cvplibrary import CVPGlobalVariables, GlobalVariableNames
 from cvplibrary import RestClient
 from cvplibrary import Device
 from cvplibrary.auditlogger import alog
-import json
+import time
 import ssl
 import ipaddress
 
@@ -862,13 +862,21 @@ def verify_bgp_spine_prefixes(device):
     # This code should be unreachable    
     return False
 
+def clear_counters(device):
+    try:
+        device.runCmds(['clear counters'])
+        device.runCmds(['clear hardware counter drop'])
+    except:
+        return False
+    
+    return None
 
 
 test_catalog = {
 #    '01.01': verify_eos_version,
 #    '01.02': verify_terminattr_version,
     '01.03': verify_extensions,
-    '01.04': verify_field_notice_44,
+#    '01.04': verify_field_notice_44,
     '01.05': verify_inventory,
     '01.06': verify_zerotouch,
     '01.07': verify_running_config_diffs,
@@ -941,6 +949,10 @@ def main():
         serial = hostname
 
 
+    alog("%s: resetting counters..." % serial)
+    clear_counters(switch)
+    time.sleep(30)
+    
     # Create dict for test results
     test_summary = {}
     test_summary[serial] = {}
