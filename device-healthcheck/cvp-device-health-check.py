@@ -778,6 +778,36 @@ def verify_bgp_spine_prefixes(device):
         neighbors = device.runCmds(['show lldp neighbors'])[0]['response']
         routed_interfaces = device.runCmds(['show ip interface brief'])[0]['response']
         peers = device.runCmds(['show ip bgp summary'])[0]['response']
+
+
+        # if the API call fails, CVP masks the exception, and simply returns a dict containing a list
+        # 'errors'
+        if 'errors' in routed_interfaces and len(routed_interfaces['errors']) > 0:
+             # Handle where 'show ip interfaces brief' hasn't been converted to json
+            try:
+                if SCRIPT_DEBUG:
+                    alog("Trying secondary ip interface collection")
+                routed_interfaces = {}
+                routed_interfaces['interfaces'] = {}
+                response = device.runCmds(['show ip interface brief'],"text")
+                if SCRIPT_DEBUG:
+                    alog("%s" % response)
+                # response contains a list, of dicts, with keys of response + output
+                # the first 3 \n lines are just the headers, so we can skip
+                for entry in response[0]['response']['output'].split('\n')[3:]:
+                    if len(entry) > 0 and entry.split()[1] != 'unassigned':
+                        routed_interfaces['interfaces'][entry.split()[0]] = {}
+                        routed_interfaces['interfaces'][entry.split()[0]]['interfaceAddress'] = {}
+                        routed_interfaces['interfaces'][entry.split()[0]]['interfaceAddress']['ipAddr'], routed_interfaces['interfaces'][entry.split()[0]]['interfaceAddress']['maskLen'] = entry.split()[1].split('/')
+              
+            except Exception as e:
+                alog("Unable to collect routed interfaces: %s" % repr(e))
+                return None
+        
+        if SCRIPT_DEBUG:
+            alog("Successfully collected interface info for verifying spine prefixes")
+
+
         
         if SCRIPT_DEBUG:
             alog("Successfully collected interface info for verifying spine prefixes")
@@ -801,7 +831,7 @@ def verify_bgp_spine_prefixes(device):
     except Exception as e:
         alog("verify_bgp_spine_prefixes: Data collection failed - %s" % e)
         return False
-    
+  
     # build a list of spine ports
     spine_ports = []
     for entry in neighbors['lldpNeighbors']:
