@@ -804,11 +804,7 @@ def verify_bgp_spine_prefixes(device):
                 alog("Unable to collect routed interfaces: %s" % repr(e))
                 return None
         
-        if SCRIPT_DEBUG:
-            alog("Successfully collected interface info for verifying spine prefixes")
-
-
-        
+      
         if SCRIPT_DEBUG:
             alog("Successfully collected interface info for verifying spine prefixes")
             
@@ -1007,12 +1003,9 @@ def main():
     # If we had any failed tests assert to fail the action
     if failures:
         assert False
-
+        
+    return 0
 
 
 if __name__ == '__main__':
     main()
-
-
-
-
