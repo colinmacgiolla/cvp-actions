@@ -797,7 +797,7 @@ def verify_bgp_spine_prefixes(device):
                     if len(entry) > 0 and entry.split()[1] != 'unassigned':
                         routed_interfaces['interfaces'][entry.split()[0]] = {}
                         routed_interfaces['interfaces'][entry.split()[0]]['interfaceAddress'] = {}
-                        routed_interfaces['interfaces'][entry.split()[0]]['interfaceAddress']['ipAddr'], routed_interfaces['interfaces'][entry.split()[0]]['interfaceAddress']['maskLen'] = entry.split()[1].split('/')
+                        routed_interfaces['interfaces'][entry.split()[0]]['interfaceAddress']['ipAddr']['address'], routed_interfaces['interfaces'][entry.split()[0]]['interfaceAddress']['ipAddr']['maskLen'] = entry.split()[1].split('/')
               
             except Exception as e:
                 alog("Unable to collect routed interfaces: %s" % repr(e))
@@ -840,10 +840,13 @@ def verify_bgp_spine_prefixes(device):
                 
     # Get the IP addresses of the spine links
     local_ip = []
+    ip = {}
     for entry in spine_ports:
         if entry in routed_interfaces['interfaces']:
-            ip = routed_interfaces['interfaces'][entry]['interfaceAddress']['ipAddr']
+            ip['address'] = routed_interfaces['interfaces'][entry]['interfaceAddress']['ipAddr']['address']
+            ip['maskLen'] = routed_interfaces['interfaces'][entry]['interfaceAddress']['ipAddr']['maskLen']
             local_ip.append( ip['address'] + '/' + str(ip['maskLen']) )
+            ip.clear()
             
     if SCRIPT_DEBUG:
         alog("Local port IP collected:\n%s" % local_ip)
