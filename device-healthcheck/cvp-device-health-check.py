@@ -27,6 +27,7 @@ ssl._create_default_https_context = ssl._create_unverified_context
 SCRIPT_DEBUG = False
 SPINE_HINT = 'spine'
 UNDERLAY_VRF = 'default'
+POST_RELOAD = False
 
 
 def check_connection(serial, device):
@@ -52,6 +53,14 @@ def get_hostname(device):
     except:
         return None
 
+
+def get_uptime(device):
+    try:
+        response = device.runCmds(['show uptime'])
+        uptime = response[0]['response']['upTime']
+        return uptime
+    except:
+        return None
 
 
 # Report unapproved EOS versions. Update list as required.
@@ -244,7 +253,7 @@ def verify_agent_logs(device):
 # Report syslog errors (or lower) for last 7 days.
 def verify_syslog(device):
     try:
-        response = device.runCmds(['show logging last 7 days threshold warnings'], 'text')
+        response = device.runCmds(['show logging last 1 days threshold errors'], 'text')
         if len(response[0]['response']['output']) == 0:
             return True
         else:
@@ -255,18 +264,21 @@ def verify_syslog(device):
 
 # Report uptime below 24 hours.
 def verify_uptime(device):
-    try:
-        response = device.runCmds(['show uptime'])
-        if response[0]['response']['upTime'] > 86400:
-            return True
-        else:
-            # If we reloaded in the last 24 hours, at a user request
-            # Then this test case should pass (cover reload due to upgrade)
-            if verify_reload_cause(device) is not True:
-                return False
-            else:
+    if POST_RELOAD == False:
+        try:
+            response = device.runCmds(['show uptime'])
+            if response[0]['response']['upTime'] > 86400:
                 return True
-    except:
+            else:
+                # If we reloaded in the last 24 hours, at a user request
+                # Then this test case should pass (cover reload due to upgrade)
+                if verify_reload_cause(device) is not True:
+                    return False
+                else:
+                    return True
+        except:
+            return None
+    else:
         return None
 
 
@@ -393,13 +405,17 @@ def verify_filesystem_utilization(device):
 
 # Report unsynchronised NTP.
 def verify_ntp(device):
-    try:
-        response = device.runCmds(['show ntp status'], 'text')
-        if response[0]['response']['output'].split('\n')[0].split(' ')[0] == 'synchronised':
-            return True
-        else:
-            return False
-    except:
+    # If we are doing a post-upgrade/reload health check, NTP might not be synced yet
+    if POST_RELOAD == False:
+        try:
+            response = device.runCmds(['show ntp status'], 'text')
+            if response[0]['response']['output'].split('\n')[0].split(' ')[0] == 'synchronised':
+                return True
+            else:
+                return False
+        except:
+            return None
+    else:
         return None
 
 
@@ -974,6 +990,12 @@ def main():
     if hostname is not None:
         serial = hostname
 
+
+    uptime = get_uptime(switch)
+    if uptime is not None and uptime < 3600:
+        global POST_RELOAD
+        POST_RELOAD = True
+    
 
     alog("%s: resetting counters..." % serial)
     clear_counters(switch)
