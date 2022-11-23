@@ -797,6 +797,7 @@ def verify_bgp_spine_prefixes(device):
                     if len(entry) > 0 and entry.split()[1] != 'unassigned':
                         routed_interfaces['interfaces'][entry.split()[0]] = {}
                         routed_interfaces['interfaces'][entry.split()[0]]['interfaceAddress'] = {}
+                        routed_interfaces['interfaces'][entry.split()[0]]['interfaceAddress']['ipAddr'] = {}
                         routed_interfaces['interfaces'][entry.split()[0]]['interfaceAddress']['ipAddr']['address'], routed_interfaces['interfaces'][entry.split()[0]]['interfaceAddress']['ipAddr']['maskLen'] = entry.split()[1].split('/')
               
             except Exception as e:
