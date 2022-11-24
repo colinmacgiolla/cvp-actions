@@ -187,43 +187,6 @@ def get_cvp(device):
     return cvp,vrf
 
 
-def get_device_by_serial(cvp_ip, device_serial):
-    """
-    get_device_by_serial - get the net element device dict for the serial number of the device
-
-    Args:
-        cvp_ip (str): The IP address of hostname of CVP
-        device_serial (str): The serial number of the switch
-
-    Returns:
-        device(dict) - The net element device dict for the device if found
-            None if not
-
-    Notes:
-        None
-    """
-    alog('searching for device by serial number: %s' % device_serial)
-
-    params = {'startIndex':'0','endIndex':'0'}
-    url = "https://" + cvp_ip + "/cvpservice/provisioning/searchTopology.do?queryParam=" + device_serial
-    session_id = CVPGlobalVariables.getValue(GlobalVariableNames.CVP_SESSION_ID)
-    response = get(url, cookies= {'access_token':session_id}, params=params,verify=False)
-    device = None
-
-    if SCRIPT_DEBUG:
-        alog("Query url is: %s" % url)
-        alog("Response to device query: %s" % response.json())
-
-    data = response.json()
-    #data = self.search_topology(device_serial)
-    if 'netElementList' in data:
-        for netelem in data['netElementList']:
-            if netelem['serialNumber'] == device_serial:
-                device = netelem
-                break
-    return device
-
-
 def get_image_bundles(cvp_ip):
     """
     get_image_bundles - get the details of the image bundles stored on CVP
@@ -356,6 +319,7 @@ def main():
     ip = CVPGlobalVariables.getValue(GlobalVariableNames.CVP_IP)
     switch = Device(CVPGlobalVariables.getValue(GlobalVariableNames.CVP_IP))
     serial = CVPGlobalVariables.getValue(GlobalVariableNames.CVP_SERIAL)
+    mac = CVPGlobalVariables.getValue(GlobalVariableNames.CURRENT_DEVICE_MAC)
 
     alog("Advanced image staging v1.0")
     if not check_connection(serial, switch):
@@ -377,15 +341,11 @@ def main():
         assert False
     alog('%s: CVP IP: %s in VRF: %s' % (hostname, cvp_ip, vrf))
 
-    device = get_device_by_serial(cvp_ip, serial)
 
-    if device is not None:
-        assigned_image = get_assigned_image(cvp_ip,device['key'])
-        alog("Current boot image is: %s" % current_boot)
-        alog("CVP assigned image bundle is: %s" % assigned_image['bundleName'])
-    else:
-        alog("%s: Error - unable to find device record using serial number" % hostname)
-        assert False
+    assigned_image = get_assigned_image(cvp_ip, mac)
+    alog("Current boot image is: %s" % current_boot)
+    alog("CVP assigned image bundle is: %s" % assigned_image['bundleName'])
+
 
     if assigned_image['bundleName'] is not None:
         # We have an image assigned, so we need to get the file names
