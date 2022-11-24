@@ -1,0 +1,11 @@
+type: ACTION
+language: PYTHON_3
+name: Advanced Image Staging
+description: Pre-stage the images in the assigned image bundle to the device
+file: script.py
+static-params: []
+dynamic-params:
+  - name: DeviceID
+    description: The ID of the device to run this script against
+    required: true
+    hidden: false

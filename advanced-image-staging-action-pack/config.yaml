@@ -1,0 +1,4 @@
+type: PACKAGE
+version: 1.0.0
+name: advanced-image-staging Action package
+description: Action package containing a script that pre-loads the assigned software to the switch in question
