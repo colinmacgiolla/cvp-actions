@@ -152,7 +152,7 @@ def get_cvp(device):
     """
     cvp = ""
     vrf = "default"
-    response = device.runDeviceCmds(['show running-config section daemon'],'text')
+    response = device.runDeviceCmds(['show running-config section daemon'], fmt='text')
 
     if len(response[0]['error']) != 0:
         return None,None
@@ -315,6 +315,9 @@ def main():
     ip = ctx.getDevice().ip
     serial = ctx.getDevice().id
     mac = ctx.getDevice().mac
+
+    if SCRIPT_DEBUG:
+        cvx.alog("Context loaded for IP: %s, serial: %s, mac: %s" % (ip, serial, mac))
 
     ctx.alog("Advanced image staging v1.0")
     if not check_connection(serial, ctx):
