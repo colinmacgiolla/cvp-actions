@@ -277,6 +277,13 @@ def verify_reload_cause(device):
         if response[0]['response']['resetCauses'][0]['description'] == 'Reload requested by the user.' or \
            response[0]['response']['resetCauses'][0]['description'] == 'Reload requested after FPGA upgrade':
             return True
+        elif response[0]['response']['resetCauses'][0]['description'] == 'The system rebooted due to a Power Loss':
+            uptime = device.runCmds(['show uptime'])
+            if uptime[0]['response']['upTime'] >= 86400:
+                return True
+            else:
+                return False
+            
         else:
             return False
     except:
